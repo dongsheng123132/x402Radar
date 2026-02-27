@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 链上转账事件（核心数据表）
+// ============================================
+model TransferEvent {
+  id             String   @id @default(uuid())
+  txHash         String   @map("tx_hash")
+  logIndex       Int?     @map("log_index")
+  chain          String
+  tokenAddress   String   @map("token_address")
+  sender         String
+  recipient      String
+  amount         Float
+  amountRaw      String   @map("amount_raw")
+  decimals       Int      @default(6)
+  facilitatorId  String   @map("facilitator_id")
+  txFrom         String   @map("tx_from")
+  blockNumber    BigInt?  @map("block_number")
+  blockTimestamp DateTime @map("block_timestamp")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  facilitator Facilitator @relation(fields: [facilitatorId], references: [id])
+
+  @@unique([txHash, logIndex, chain])
+  @@index([sender])
+  @@index([recipient])
+  @@index([facilitatorId])
+  @@index([blockTimestamp])
+  @@index([chain])
+  @@map("transfer_events")
+}
+
+// ============================================
+// Facilitator（支付中介）
+// ============================================
+model Facilitator {
+  id        String   @id
+  name      String
+  imageUrl  String?  @map("image_url")
+  docsUrl   String?  @map("docs_url")
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  addresses FacilitatorAddress[]
+  transfers TransferEvent[]
+  stats     FacilitatorStats[]
+
+  @@map("facilitators")
+}
+
+// ============================================
+// Facilitator 链上地址
+// ============================================
+model FacilitatorAddress {
+  id            String    @id @default(uuid())
+  facilitatorId String    @map("facilitator_id")
+  chain         String
+  address       String
+  tokenAddress  String    @map("token_address")
+  tokenSymbol   String    @map("token_symbol")
+  tokenDecimals Int       @map("token_decimals")
+  firstSeenAt   DateTime  @map("first_seen_at")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+
+  facilitator Facilitator @relation(fields: [facilitatorId], references: [id])
+
+  @@unique([chain, address, tokenAddress])
+  @@index([chain])
+  @@index([address])
+  @@map("facilitator_addresses")
+}
+
+// ============================================
+// Agent（付款方）
+// ============================================
+model Agent {
+  id           String   @id @default(uuid())
+  address      String   @unique
+  label        String?
+  firstSeenAt  DateTime @map("first_seen_at")
+  lastSeenAt   DateTime @map("last_seen_at")
+  totalSpent   Float    @default(0) @map("total_spent")
+  totalTxCount Int      @default(0) @map("total_tx_count")
+  score        Float?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([totalSpent])
+  @@index([totalTxCount])
+  @@index([lastSeenAt])
+  @@map("agents")
+}
+
+// ============================================
+// Seller（收款方）
+// ============================================
+model Seller {
+  id            String   @id @default(uuid())
+  address       String   @unique
+  label         String?
+  origin        String?
+  firstSeenAt   DateTime @map("first_seen_at")
+  lastSeenAt    DateTime @map("last_seen_at")
+  totalReceived Float    @default(0) @map("total_received")
+  totalTxCount  Int      @default(0) @map("total_tx_count")
+  uniqueAgents  Int      @default(0) @map("unique_agents")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  resources Resource[]
+
+  @@index([totalReceived])
+  @@index([totalTxCount])
+  @@index([origin])
+  @@map("sellers")
+}
+
+// ============================================
+// Resource（x402 服务/API 端点）
+// ============================================
+model Resource {
+  id           String    @id @default(uuid())
+  url          String    @unique
+  origin       String
+  path         String
+  description  String?
+  scheme       String    @default("exact")
+  network      String
+  maxAmount    String    @map("max_amount")
+  payTo        String    @map("pay_to")
+  asset        String
+  sellerId     String?   @map("seller_id")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  seller Seller? @relation(fields: [sellerId], references: [id])
+
+  @@index([origin])
+  @@index([payTo])
+  @@map("resources")
+}
+
+// ============================================
+// Facilitator 统计（预聚合）
+// ============================================
+model FacilitatorStats {
+  id            String   @id @default(uuid())
+  facilitatorId String   @map("facilitator_id")
+  chain         String
+  period        String
+  totalVolume   Float    @map("total_volume")
+  totalTxCount  Int      @map("total_tx_count")
+  uniqueBuyers  Int      @map("unique_buyers")
+  uniqueSellers Int      @map("unique_sellers")
+  calculatedAt  DateTime @map("calculated_at")
+
+  facilitator Facilitator @relation(fields: [facilitatorId], references: [id])
+
+  @@unique([facilitatorId, chain, period])
+  @@map("facilitator_stats")
+}
+
+// ============================================
+// 每日全局统计
+// ============================================
+model DailyStats {
+  id            String   @id @default(uuid())
+  date          DateTime @db.Date
+  chain         String
+  totalVolume   Float    @map("total_volume")
+  totalTxCount  Int      @map("total_tx_count")
+  uniqueBuyers  Int      @map("unique_buyers")
+  uniqueSellers Int      @map("unique_sellers")
+  newAgents     Int      @map("new_agents")
+  newSellers    Int      @map("new_sellers")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([date, chain])
+  @@index([date])
+  @@map("daily_stats")
+}
+
+// ============================================
+// 同步游标
+// ============================================
+model SyncCursor {
+  id              String   @id @default(uuid())
+  source          String
+  chain           String
+  lastSyncedAt    DateTime @map("last_synced_at")
+  lastBlockNumber BigInt?  @map("last_block_number")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([source, chain])
+  @@map("sync_cursors")
+}

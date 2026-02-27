@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0a1628"/>
+      <stop offset="100%" stop-color="#050d1a"/>
+    </radialGradient>
+    <linearGradient id="sweep" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF88" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#00FF88" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="g">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+
+  <!-- Rings -->
+  <circle cx="64" cy="58" r="46" fill="none" stroke="#1a3a5c" stroke-width="0.8" opacity="0.5"/>
+  <circle cx="64" cy="58" r="32" fill="none" stroke="#1a3a5c" stroke-width="0.8" opacity="0.4"/>
+  <circle cx="64" cy="58" r="18" fill="none" stroke="#1a3a5c" stroke-width="0.8" opacity="0.3"/>
+
+  <!-- Cross hairs -->
+  <line x1="64" y1="10" x2="64" y2="106" stroke="#1a3a5c" stroke-width="0.5" opacity="0.3"/>
+  <line x1="16" y1="58" x2="112" y2="58" stroke="#1a3a5c" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Sweep -->
+  <path d="M64,58 L64,12 A46,46 0 0,1 96,28 Z" fill="url(#sweep)" opacity="0.3"/>
+  <line x1="64" y1="58" x2="96" y2="28" stroke="#00FF88" stroke-width="1.5" opacity="0.8" filter="url(#g)"/>
+
+  <!-- Dots -->
+  <circle cx="80" cy="38" r="3" fill="#00FF88" filter="url(#g)" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="45" cy="42" r="2.5" fill="#00DDFF" filter="url(#g)" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="88" cy="65" r="2" fill="#0088FF" filter="url(#g)" opacity="0.5"/>
+  <circle cx="50" cy="75" r="2.5" fill="#00FF88" filter="url(#g)" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0.3;0.8" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Center -->
+  <circle cx="64" cy="58" r="5" fill="#0a1628" stroke="#00FF88" stroke-width="1.5" filter="url(#g)"/>
+  <circle cx="64" cy="58" r="2" fill="#00FF88" filter="url(#g)"/>
+
+  <!-- x402 text -->
+  <text x="64" y="115" text-anchor="middle" font-family="'SF Mono','Courier New',monospace" font-size="16" font-weight="bold" fill="#00FF88" filter="url(#g)" letter-spacing="1">x402</text>
+</svg>
