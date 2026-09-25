@@ -18,6 +18,7 @@ Copy `.env.example` to `.env.local` and set:
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | Supabase PostgreSQL connection string |
+| `DATABASE_SCHEMA` | (Optional) Postgres schema to use, e.g. `radar_v2`; appended to `DATABASE_URL` at runtime so the secret URL never needs editing |
 | `CDP_API_KEY` | Coinbase Developer Platform API key (for chain sync via CDP Data API) |
 | `CRON_SECRET` | Random secret; cron routes check `Authorization: Bearer <CRON_SECRET>` or `?secret=<CRON_SECRET>` |
 | `BASE_RPC_URL` | (Optional) Base RPC for fallback indexer |
