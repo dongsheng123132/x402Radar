@@ -1,0 +1,16 @@
+name: Sync transfers
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync-transfers cron endpoint
+        run: |
+          curl -fsS --max-time 310 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.RADAR_URL || 'https://x402-radar.vercel.app' }}/api/cron/sync-transfers"

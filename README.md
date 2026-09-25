@@ -49,12 +49,27 @@ Open [http://localhost:3000](http://localhost:3000).
 Two API routes are intended to be called on a schedule:
 
 1. **Sync transfers** – `GET /api/cron/sync-transfers`  
-   Pulls USDC Transfer events from CDP API (by facilitator address), writes to `transfer_events`, updates sync cursors.  
-   **Suggested schedule:** every 1 minute (Vercel Pro required for minute-level; otherwise use an external worker).
+   For each known, non-deprecated facilitator address, pulls that address's own
+   transactions from Blockscout (`filter=from`) and extracts the USDC transfer
+   each one caused (payer -> payee), writes to `transfer_events`, updates sync
+   cursors. This is the same methodology x402scan uses: index USDC transfers
+   from transactions *sent by* known facilitator addresses, not transfers
+   where the facilitator is the token from/to. Uses the free Blockscout API
+   (`base.blockscout.com`), no API key needed.  
+   **Primary schedule:** a GitHub Actions workflow (`.github/workflows/sync.yml`)
+   calls this endpoint every 15 minutes via `workflow_dispatch`/`schedule`.  
+   **Fallback schedule:** the Vercel cron in `vercel.json` also calls it once
+   daily (Vercel Hobby plan only supports daily crons).  
+   **History:** only from cutover (2026-09-25); the first sync of any given
+   facilitator address only backfills `SYNC_BACKFILL_HOURS` (default 24h) —
+   older history for that address is not indexed. Per-run limits
+   (`SYNC_MAX_PAGES`, `SYNC_MAX_TX_LOOKUPS`, `SYNC_TIME_BUDGET_MS`) may leave
+   an address `truncated`; this is reported (not hidden) in the response and
+   picked up again on the next run from the address's sync cursor.
 
 2. **Aggregate stats** – `GET /api/cron/aggregate-stats`  
    Recomputes `agents`, `sellers`, `facilitator_stats`, `daily_stats` from `transfer_events`.  
-   **Suggested schedule:** every 10 minutes.
+   **Suggested schedule:** every 10 minutes (falls back to daily on Vercel Hobby, see `vercel.json`).
 
 **Auth:** If `CRON_SECRET` is set, call with either:
 
@@ -80,7 +95,7 @@ curl -H "Authorization: Bearer YOUR_CRON_SECRET" "https://your-app.vercel.app/ap
 
 ## Facilitator addresses
 
-The indexer only ingests transfers where `transaction_from` is a configured facilitator address. Default config uses a small placeholder set in `src/lib/facilitators/addresses.ts`. For production, replace with the full list (e.g. from x402scan’s facilitators package or [facilitators.x402.watch](https://facilitators.x402.watch)).
+The indexer only ingests transfers where `transaction_from` is a configured facilitator address. `src/lib/facilitators/addresses.ts` is a snapshot (2026-09-25) of the full Base address list from x402scan's open-source facilitators package, including deprecated addresses (which are excluded from active syncing but kept for historical reference).
 
 ## Scripts
 

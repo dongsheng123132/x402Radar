@@ -4,7 +4,6 @@ import { getFacilitatorAddresses } from "../src/lib/facilitators/addresses";
 
 async function main() {
   const chain = "base";
-  const usdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913".toLowerCase();
 
   for (const f of FACILITATORS) {
     await prisma.facilitator.upsert({
@@ -21,7 +20,6 @@ async function main() {
   }
 
   const entries = getFacilitatorAddresses(chain);
-  const now = new Date();
   for (const e of entries) {
     await prisma.facilitatorAddress.upsert({
       where: {
@@ -31,7 +29,7 @@ async function main() {
           tokenAddress: e.tokenAddress,
         },
       },
-      update: { lastSyncedAt: now },
+      update: { deprecated: e.deprecated, firstSeenAt: e.firstSeenAt },
       create: {
         facilitatorId: e.facilitatorId,
         chain: e.chain,
@@ -39,8 +37,9 @@ async function main() {
         tokenAddress: e.tokenAddress,
         tokenSymbol: e.tokenSymbol,
         tokenDecimals: e.tokenDecimals,
-        firstSeenAt: now,
-        lastSyncedAt: now,
+        deprecated: e.deprecated,
+        firstSeenAt: e.firstSeenAt,
+        lastSyncedAt: null,
       },
     });
   }

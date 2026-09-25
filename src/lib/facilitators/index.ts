@@ -37,6 +37,10 @@ export const FACILITATORS: FacilitatorMeta[] = [
   { id: "x402jobs", name: "x402Jobs" },
   { id: "openfacilitator", name: "OpenFacilitator" },
   { id: "relai", name: "Relai" },
+  { id: "bitrefill", name: "Bitrefill" },
+  { id: "cascade", name: "Cascade" },
+  { id: "fluxa", name: "Fluxa" },
+  { id: "obol", name: "Obol" },
 ];
 
 export function getFacilitatorById(id: string): FacilitatorMeta | undefined {
