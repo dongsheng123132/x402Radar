@@ -36,7 +36,7 @@ interface DecodedParam {
 
 export interface BlockscoutTxItem {
   hash: string;
-  block_number: number;
+  block_number: number | null;
   timestamp: string;
   result: string;
   status?: string | null;
@@ -143,6 +143,7 @@ export function buildRowFromAuthorizationTx(
   facilitatorId: string,
   facilitatorAddress: string
 ): TransferRow | null {
+  if (tx.block_number == null) return null;
   if (!tx.to || tx.to.hash.toLowerCase() !== USDC_ADDRESS) return null;
   if (!tx.method || !AUTHORIZATION_METHODS.has(tx.method)) return null;
 
@@ -168,7 +169,7 @@ export function buildRowFromAuthorizationTx(
     decimals,
     facilitatorId,
     txFrom: facilitatorAddress.toLowerCase(),
-    blockNumber: BigInt(tx.block_number),
+    blockNumber: BigInt(tx.block_number ?? 0),
     blockTimestamp: new Date(tx.timestamp),
   };
 }
@@ -196,7 +197,7 @@ function buildRowsFromTokenTransfers(
       decimals,
       facilitatorId,
       txFrom: facilitatorAddress.toLowerCase(),
-      blockNumber: BigInt(tx.block_number),
+      blockNumber: BigInt(tx.block_number ?? 0),
       blockTimestamp: new Date(tx.timestamp),
     });
   }
@@ -229,7 +230,8 @@ async function syncOneAddress(
 
   const cutoffTimestamp = cursorBlock === null ? Date.now() - SYNC_BACKFILL_HOURS * 60 * 60 * 1000 : null;
 
-  outer: while (pages < SYNC_MAX_PAGES) {
+  let done = false;
+  while (!done && pages < SYNC_MAX_PAGES) {
     await sleep(200);
     const data = await fetchTransactionsFrom(addr, nextPageParams);
     pages++;
@@ -238,15 +240,20 @@ async function syncOneAddress(
     const rows: TransferRow[] = [];
 
     for (const tx of data.items) {
+      // Pending txs have no block yet; they'll be picked up once mined.
+      if (tx.block_number == null) continue;
+
       if (newestBlockSeen === null || BigInt(tx.block_number) > newestBlockSeen) {
         newestBlockSeen = BigInt(tx.block_number);
       }
 
       if (cursorBlock !== null && tx.block_number <= cursorBlock) {
-        break outer;
+        done = true;
+        break;
       }
       if (cutoffTimestamp !== null && new Date(tx.timestamp).getTime() < cutoffTimestamp) {
-        break outer;
+        done = true;
+        break;
       }
 
       if (tx.result !== "success") continue;
@@ -259,7 +266,8 @@ async function syncOneAddress(
 
       if (ctx.lookupsRemaining <= 0) {
         truncated = true;
-        break outer;
+        done = true;
+        break;
       }
       ctx.lookupsRemaining--;
       await sleep(200);
@@ -272,6 +280,7 @@ async function syncOneAddress(
       inserted += result.count;
     }
 
+    if (done) break;
     nextPageParams = data.next_page_params;
     if (!nextPageParams) break;
     if (Date.now() > ctx.deadline) {

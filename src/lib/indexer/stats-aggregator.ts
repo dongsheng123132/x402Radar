@@ -15,6 +15,11 @@ function parsePeriod(period: string): number {
  * facilitator_stats, and daily_stats.
  */
 export async function aggregateStats(): Promise<void> {
+  // Leaderboards skip self-transfers and legs whose counterparty is a facilitator/router
+  // address (e.g. Meridian's 0x8e77… router): those are hops, not buyers or sellers.
+  await prisma.$executeRaw`DELETE FROM agents WHERE address IN (SELECT address FROM facilitator_addresses)`;
+  await prisma.$executeRaw`DELETE FROM sellers WHERE address IN (SELECT address FROM facilitator_addresses)`;
+
   // 1. Agents (from sender)
   await prisma.$executeRaw`
     INSERT INTO agents (id, address, first_seen_at, last_seen_at, total_spent, total_tx_count, created_at)
@@ -27,6 +32,9 @@ export async function aggregateStats(): Promise<void> {
       COUNT(*),
       NOW()
     FROM transfer_events
+    WHERE sender <> recipient
+      AND sender NOT IN (SELECT address FROM facilitator_addresses)
+      AND recipient NOT IN (SELECT address FROM facilitator_addresses)
     GROUP BY sender
     ON CONFLICT (address) DO UPDATE SET
       last_seen_at = EXCLUDED.last_seen_at,
@@ -47,6 +55,9 @@ export async function aggregateStats(): Promise<void> {
       COUNT(DISTINCT sender),
       NOW()
     FROM transfer_events
+    WHERE sender <> recipient
+      AND sender NOT IN (SELECT address FROM facilitator_addresses)
+      AND recipient NOT IN (SELECT address FROM facilitator_addresses)
     GROUP BY recipient
     ON CONFLICT (address) DO UPDATE SET
       last_seen_at = EXCLUDED.last_seen_at,
