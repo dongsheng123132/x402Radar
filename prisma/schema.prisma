@@ -67,6 +67,7 @@ model FacilitatorAddress {
   tokenAddress  String    @map("token_address")
   tokenSymbol   String    @map("token_symbol")
   tokenDecimals Int       @map("token_decimals")
+  deprecated    Boolean   @default(false)
   firstSeenAt   DateTime  @map("first_seen_at")
   lastSyncedAt  DateTime? @map("last_synced_at")
 

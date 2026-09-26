@@ -16,13 +16,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { total, errors, facilitatorResults } = await syncAllFromBlockscout();
+    const { total, errors, facilitatorResults, truncated, addressesVisited, addressesSkippedForTime } =
+      await syncAllFromBlockscout();
 
     if (total > 0) {
       await aggregateStats();
     }
 
-    return NextResponse.json({ ok: true, total, errors, facilitatorResults });
+    return NextResponse.json({
+      ok: true,
+      total,
+      errors,
+      facilitatorResults,
+      truncated,
+      addressesVisited,
+      addressesSkippedForTime,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
