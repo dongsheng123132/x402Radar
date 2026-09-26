@@ -8,7 +8,8 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
  */
 function datasourceUrl(): string | undefined {
   const url = process.env.DATABASE_URL;
-  const schema = process.env.DATABASE_SCHEMA;
+  // Strip BOM/whitespace: values piped in from PowerShell arrive with a leading U+FEFF.
+  const schema = process.env.DATABASE_SCHEMA?.replace(/^﻿/, "").trim();
   if (!url || !schema) return url;
   const u = new URL(url);
   u.searchParams.set("schema", schema);
